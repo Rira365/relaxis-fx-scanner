@@ -1,3 +1,4 @@
+from io import StringIO
 import streamlit as st
 import requests
 import pandas as pd
@@ -16,7 +17,7 @@ def get_fx_data():
     url = f"https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=USD&to_symbol=JPY&interval=1min&apikey={API_KEY}&datatype=csv"
     response = requests.get(url)
     if response.status_code == 200:
-        df = pd.read_csv(pd.compat.StringIO(response.text))
+        df = pd.read_csv(StringIO(response.text))
         df['timestamp'] = pd.to_datetime(df['timestamp'])
         df = df.sort_values('timestamp')
         return df
