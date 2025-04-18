@@ -1,3 +1,4 @@
+from streamlit_autorefresh import st_autorefresh
 import streamlit as st
 import pandas as pd
 import requests
@@ -7,6 +8,8 @@ import os
 
 # タイトル
 st.title("Relaxis Future Forecast - BTC/USD")
+# 自動リロード（60秒ごと）
+st_autorefresh(interval=60 * 1000, key="data_refresh")
 
 # シークレットからAPIキーを取得
 API_KEY = st.secrets["API_KEY"]
