@@ -4,7 +4,6 @@ import numpy as np
 import requests
 import plotly.graph_objects as go
 from datetime import datetime, timedelta, timezone
-from secret import API_KEY  # 安全に読み込み
 
 # Set timezone to JST
 jst = timezone(timedelta(hours=9))
@@ -12,7 +11,8 @@ jst = timezone(timedelta(hours=9))
 # Title
 st.title("Relaxis Future Forecast - BTC/USD")
 
-# API endpoint
+# API key from Streamlit Secrets
+API_KEY = st.secrets["API_KEY"]
 SYMBOL = "BTC/USD"
 INTERVAL = "1min"
 URL = f"https://api.twelvedata.com/time_series?symbol={SYMBOL}&interval={INTERVAL}&outputsize=60&apikey={API_KEY}"
