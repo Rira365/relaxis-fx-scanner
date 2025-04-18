@@ -1,51 +1,86 @@
-
 import streamlit as st
 import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-import pytz
-import random
+import requests
+import datetime
+import plotly.graph_objects as go
+import os
 
-# 日本時間
-jst = pytz.timezone("Asia/Tokyo")
-now = datetime.now(pytz.utc).astimezone(jst)
-
-# 擬似的な過去データ（30分）
-timestamps = [now - timedelta(minutes=i) for i in reversed(range(30))]
-prices = np.cumsum(np.random.randn(30)) * 50 + 30000  # BTC/USD
-
-# 未来予測（15分）
-future_steps = 15
-future_timestamps = [now + timedelta(minutes=i) for i in range(1, future_steps + 1)]
-direction = np.random.choice(["上昇", "下降"])
-certainty = np.random.randint(70, 95)
-trend = np.linspace(0.5, 3.0, future_steps) * (1 if direction == "上昇" else -1)
-future_prices = prices[-1] + trend * 50
-
-# データフレーム化
-past_df = pd.DataFrame({'timestamp': timestamps, 'price': prices})
-future_df = pd.DataFrame({'timestamp': future_timestamps, 'price': future_prices})
-
-# タイトルと表示
+# タイトル
 st.title("Relaxis Future Forecast - BTC/USD")
-st.write(f"未来予測：**{direction}（確率{certainty}%）**")
+
+# シークレットからAPIキーを取得
+API_KEY = st.secrets["API_KEY"]
+
+# データ取得関数（1分足）
+@st.cache_data(ttl=60)
+def get_btc_data():
+    url = f"https://api.twelvedata.com/time_series?symbol=BTC/USD&interval=1min&outputsize=50&apikey={API_KEY}"
+    response = requests.get(url)
+    data = response.json()
+    df = pd.DataFrame(data["values"])
+    df["datetime"] = pd.to_datetime(df["datetime"])
+    df["datetime"] = df["datetime"].dt.tz_localize("UTC").dt.tz_convert("Asia/Tokyo")
+    df = df.sort_values("datetime")
+    df[["open", "high", "low", "close"]] = df[["open", "high", "low", "close"]].astype(float)
+    return df
+
+# 未来予測（仮の予測ロジック）
+def predict_future(df):
+    last_price = df["close"].iloc[-1]
+    future_times = [df["datetime"].iloc[-1] + datetime.timedelta(minutes=i) for i in range(1, 6)]
+    future_prices = [last_price + i * 30 for i in range(1, 6)]
+    future_df = pd.DataFrame({"datetime": future_times, "predicted": future_prices})
+    return future_df, "上昇", 86  # 上昇/下降, 確率(%)
+
+# データ取得
+df = get_btc_data()
+future_df, direction, confidence = predict_future(df)
 
 # 現在価格
-current_price = prices[-1]
+current_price = df["close"].iloc[-1]
+st.markdown(f"### 未来予測：**{direction}**（確率{confidence}%）")
 st.metric(label="現在のBTC/USD", value=f"${current_price:,.2f}")
 
-# チャート描画
-import matplotlib.pyplot as plt
-plt.figure(figsize=(10, 5))
-plt.plot(past_df['timestamp'], past_df['price'], label='過去の価格', linewidth=2)
-plt.plot(future_df['timestamp'], future_df['price'], label=f'未来予測（{direction}, 確率{certainty}%）',
-         linestyle='--', linewidth=2, color='orange')
-plt.axvline(x=now, color='gray', linestyle=':', label='現在')
-plt.text(now, current_price, f"${current_price:,.2f}", verticalalignment='bottom', fontsize=9, color='blue')
-plt.xlabel('時間（日本時間）')
-plt.ylabel('価格（USD）')
-plt.legend()
-plt.xticks(rotation=30, fontsize=8)
-plt.yticks(fontsize=9)
-plt.grid(True)
-st.pyplot(plt)
+# ローソク足チャート描画
+fig = go.Figure()
+
+# 実データ（ローソク足）
+fig.add_trace(go.Candlestick(
+    x=df["datetime"],
+    open=df["open"],
+    high=df["high"],
+    low=df["low"],
+    close=df["close"],
+    name="実データ"
+))
+
+# 現在価格ラベル
+fig.add_trace(go.Scatter(
+    x=[df["datetime"].iloc[-1]],
+    y=[current_price],
+    mode="text",
+    text=[f"${current_price:.2f}"],
+    textposition="bottom right",
+    name="現在価格",
+    textfont=dict(color="blue", size=12)
+))
+
+# 未来予測ライン
+fig.add_trace(go.Scatter(
+    x=future_df["datetime"],
+    y=future_df["predicted"],
+    mode="lines",
+    name=f"未来予測（{direction}, 確率{confidence}%）",
+    line=dict(dash="dash", color="orange")
+))
+
+# レイアウト
+fig.update_layout(
+    xaxis_title="日時（日本時間）",
+    yaxis_title="価格（USD）",
+    legend_title="凡例",
+    template="plotly_dark",
+    height=600
+)
+
+st.plotly_chart(fig, use_container_width=True)
