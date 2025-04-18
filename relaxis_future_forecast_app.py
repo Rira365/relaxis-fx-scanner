@@ -1,3 +1,4 @@
+from streamlit_autorefresh import st_autorefresh
 import streamlit as st
 import pandas as pd
 import requests
@@ -11,6 +12,8 @@ from ta.momentum import RSIIndicator
 # タイトルと画面設定
 st.set_page_config(layout="wide")
 st.title("Relaxis Future Forecast - BTC/USD")
+# ⏱ 自動更新：60秒ごとにページをリロード
+st_autorefresh(interval=60 * 1000, key="data_refresh")
 
 # タイムゾーン切替（東京／NY）
 timezone = st.radio("表示する時間帯を選択:", ("Tokyo (JST)", "New York (EST)"))
