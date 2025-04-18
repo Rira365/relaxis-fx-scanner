@@ -5,8 +5,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 st.title("Relaxis FX Scanner - USD/JPYリアルタイム価格")
-
-API_KEY = "BLXFFEXX4AAJK0RE"
+# secret.py
+API_KEY = 
 
 def get_fx_data():
     url = f"https://www.alphavantage.co/query?function=FX_INTRADAY&from_symbol=USD&to_symbol=JPY&interval=1min&apikey={API_KEY}&outputsize=compact"
